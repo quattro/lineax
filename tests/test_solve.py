@@ -21,6 +21,22 @@ import pytest
 from .helpers import tree_allclose
 
 
+def test_toeplitz_solve(getkey):
+    if jax.config.jax_enable_x64:  # pyright: ignore
+        tol = 1e-10
+    else:
+        tol = 1e-4
+    solver = lx.LevinsonDurbin()
+
+    col = jr.normal(getkey(), (100,))
+    operator = lx.ToeplitzLinearOperator(col)
+    true_x = jr.normal(getkey(), (100,))
+    b = operator.mv(true_x)
+
+    lx_soln = lx.linear_solve(operator, b, solver).value
+
+    assert tree_allclose(lx_soln, true_x, atol=tol, rtol=tol)
+
 def test_gmres_large_dense(getkey):
     if jax.config.jax_enable_x64:  # pyright: ignore
         tol = 1e-10

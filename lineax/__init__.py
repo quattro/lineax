@@ -43,6 +43,7 @@ from ._operator import (
     PyTreeLinearOperator as PyTreeLinearOperator,
     TaggedLinearOperator as TaggedLinearOperator,
     TangentLinearOperator as TangentLinearOperator,
+    ToeplitzLinearOperator as ToeplitzLinearOperator,
     tridiagonal as tridiagonal,
     TridiagonalLinearOperator as TridiagonalLinearOperator,
 )
@@ -58,6 +59,7 @@ from ._solver import (
     Cholesky as Cholesky,
     Diagonal as Diagonal,
     GMRES as GMRES,
+    LevinsonDurbin as LevinsonDurbin,
     LU as LU,
     NormalCG as NormalCG,
     QR as QR,
