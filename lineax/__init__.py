@@ -38,6 +38,7 @@ from ._operator import (
     linearise as linearise,
     materialise as materialise,
     MatrixLinearOperator as MatrixLinearOperator,
+    SparseMatrixLinearOperator as SparseMatrixLinearOperator,
     MulLinearOperator as MulLinearOperator,
     NegLinearOperator as NegLinearOperator,
     PyTreeLinearOperator as PyTreeLinearOperator,
@@ -63,6 +64,7 @@ from ._solver import (
     QR as QR,
     SVD as SVD,
     Triangular as Triangular,
+    SparseTriangular as SparseTriangular,
     Tridiagonal as Tridiagonal,
 )
 from ._tags import (

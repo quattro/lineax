@@ -20,5 +20,8 @@ from .gmres import GMRES as GMRES
 from .lu import LU as LU
 from .qr import QR as QR
 from .svd import SVD as SVD
-from .triangular import Triangular as Triangular
+from .triangular import (
+    Triangular as Triangular,
+    SparseTriangular as SparseTriangular,
+)
 from .tridiagonal import Tridiagonal as Tridiagonal

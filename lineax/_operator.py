@@ -22,6 +22,7 @@ from typing import Any, Iterable, Literal, NoReturn, Optional, TypeVar, Union
 import equinox as eqx
 import equinox.internal as eqxi
 import jax
+import jax.experimental.sparse as sparse
 import jax.flatten_util as jfu
 import jax.lax as lax
 import jax.numpy as jnp
@@ -278,6 +279,45 @@ class MatrixLinearOperator(AbstractLinearOperator, strict=True):
     def out_structure(self):
         out_size, _ = jnp.shape(self.matrix)
         return jax.ShapeDtypeStruct(shape=(out_size,), dtype=self.matrix.dtype)
+
+
+class SparseMatrixLinearOperator(AbstractLinearOperator, strict=True):
+    matrix: sparse.BCOO
+    tags: frozenset[object] = eqx.field(static=True)
+
+    def __init__(
+        self, matrix: sparse.BCOO, tags: Union[object, frozenset[object]] = ()
+    ):
+        self.matrix = matrix
+        self.tags = _frozenset(tags)
+
+    def mv(self, vector: ArrayLike):
+        return sparse.sparsify(jnp.matmul)(self.matrix, vector, precision=lax.Precision.HIGHEST)  # type: ignore
+
+    def as_matrix(self):
+        # raise ValueError("Refusing to materialise sparse matrix.")
+        # Or you could do:
+        return self.matrix.todense()
+
+    def transpose(self):
+        if symmetric_tag in self.tags:
+            return self
+        return MatrixLinearOperator(self.matrix.T, transpose_tags(self.tags))
+
+    def in_structure(self) -> jax.ShapeDtypeStruct:
+        _, in_size = self.matrix.shape
+        return jax.ShapeDtypeStruct((in_size,), self.matrix.dtype)
+
+    def out_structure(self) -> jax.ShapeDtypeStruct:
+        out_size, _ = self.matrix.shape
+        return jax.ShapeDtypeStruct((out_size,), self.matrix.dtype)
+
+    @property
+    def shape(self):
+        n, *_ = self.out_structure().shape
+        p, *_ = self.in_structure().shape
+
+        return n, p
 
 
 def _matmul(matrix: ArrayLike, vector: ArrayLike) -> Array:
@@ -1219,6 +1259,7 @@ def linearise(operator: AbstractLinearOperator) -> AbstractLinearOperator:
 
 
 @linearise.register(MatrixLinearOperator)
+@linearise.register(SparseMatrixLinearOperator)
 @linearise.register(PyTreeLinearOperator)
 @linearise.register(FunctionLinearOperator)
 @linearise.register(IdentityLinearOperator)
@@ -1296,6 +1337,7 @@ def materialise(operator: AbstractLinearOperator) -> AbstractLinearOperator:
 
 
 @materialise.register(MatrixLinearOperator)
+@materialise.register(SparseMatrixLinearOperator)
 @materialise.register(PyTreeLinearOperator)
 @materialise.register(IdentityLinearOperator)
 @materialise.register(DiagonalLinearOperator)
@@ -1362,6 +1404,7 @@ def diagonal(operator: AbstractLinearOperator) -> Shaped[Array, " size"]:
 
 
 @diagonal.register(MatrixLinearOperator)
+@diagonal.register(SparseMatrixLinearOperator)
 @diagonal.register(PyTreeLinearOperator)
 @diagonal.register(JacobianLinearOperator)
 @diagonal.register(FunctionLinearOperator)
@@ -1421,6 +1464,7 @@ def tridiagonal(
 
 
 @tridiagonal.register(MatrixLinearOperator)
+@tridiagonal.register(SparseMatrixLinearOperator)
 @tridiagonal.register(PyTreeLinearOperator)
 @tridiagonal.register(JacobianLinearOperator)
 @tridiagonal.register(FunctionLinearOperator)
@@ -1476,6 +1520,7 @@ def is_symmetric(operator: AbstractLinearOperator) -> bool:
 
 
 @is_symmetric.register(MatrixLinearOperator)
+@is_symmetric.register(SparseMatrixLinearOperator)
 @is_symmetric.register(PyTreeLinearOperator)
 @is_symmetric.register(JacobianLinearOperator)
 @is_symmetric.register(FunctionLinearOperator)
@@ -1528,6 +1573,7 @@ def is_diagonal(operator: AbstractLinearOperator) -> bool:
 
 
 @is_diagonal.register(MatrixLinearOperator)
+@is_diagonal.register(SparseMatrixLinearOperator)
 @is_diagonal.register(PyTreeLinearOperator)
 @is_diagonal.register(JacobianLinearOperator)
 @is_diagonal.register(FunctionLinearOperator)
@@ -1570,6 +1616,7 @@ def is_tridiagonal(operator: AbstractLinearOperator) -> bool:
 
 
 @is_tridiagonal.register(MatrixLinearOperator)
+@is_tridiagonal.register(SparseMatrixLinearOperator)
 @is_tridiagonal.register(PyTreeLinearOperator)
 @is_tridiagonal.register(JacobianLinearOperator)
 @is_tridiagonal.register(FunctionLinearOperator)
@@ -1606,6 +1653,7 @@ def has_unit_diagonal(operator: AbstractLinearOperator) -> bool:
 
 
 @has_unit_diagonal.register(MatrixLinearOperator)
+@has_unit_diagonal.register(SparseMatrixLinearOperator)
 @has_unit_diagonal.register(PyTreeLinearOperator)
 @has_unit_diagonal.register(JacobianLinearOperator)
 @has_unit_diagonal.register(FunctionLinearOperator)
@@ -1647,6 +1695,7 @@ def is_lower_triangular(operator: AbstractLinearOperator) -> bool:
 
 
 @is_lower_triangular.register(MatrixLinearOperator)
+@is_lower_triangular.register(SparseMatrixLinearOperator)
 @is_lower_triangular.register(PyTreeLinearOperator)
 @is_lower_triangular.register(JacobianLinearOperator)
 @is_lower_triangular.register(FunctionLinearOperator)
@@ -1687,6 +1736,7 @@ def is_upper_triangular(operator: AbstractLinearOperator) -> bool:
 
 
 @is_upper_triangular.register(MatrixLinearOperator)
+@is_upper_triangular.register(SparseMatrixLinearOperator)
 @is_upper_triangular.register(PyTreeLinearOperator)
 @is_upper_triangular.register(JacobianLinearOperator)
 @is_upper_triangular.register(FunctionLinearOperator)
